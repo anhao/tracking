@@ -4,6 +4,7 @@ import {IconEyeOpened, IconSetting} from "@douyinfe/semi-icons";
 import {useEffect, useState} from "react";
 import {Timeline} from '@douyinfe/semi-ui';
 import {Typography} from '@douyinfe/semi-ui';
+import {notification, shell} from '@tauri-apps/api';
 
 const {Text} = Typography
 const API_URL = "https://v2.alapi.cn/api/tracking"
@@ -36,13 +37,17 @@ interface columnItem {
     content: string
 }
 
+async function openUrl(url:string) {
+   await shell.open(url)
+}
+
 export const HomePanel = () => {
     const [settingVisible, setSettingVisible] = useState(false)
     const [batchVisible, setBatchVisible] = useState(false)
     const [dataSource, setDataSource] = useState<columnItem[]>([])
     const [numbers, setNumbers] = useState<string[]>([])
     const [token, setToken] = useState(
-        window && window.localStorage.getItem("tracking_token") || ""
+        localStorage.getItem("tracking_token") || ""
     )
     const [trackResult, setTrackResult] = useState({})
 
@@ -54,7 +59,7 @@ export const HomePanel = () => {
     const [isQuery, setIsQuery] = useState(false)
 
     // @ts-ignore
-    const columns = [
+    const columns:ColumnProps<columnItem> = [
         {
             title: '快递公司',
             dataIndex: 'exp_name',
@@ -141,7 +146,7 @@ export const HomePanel = () => {
             // width: "180px",
             align: 'center',
             render: (text: any) => {
-                return <Text style={{width:"100px"}} ellipsis={{ showTooltip: true }}>{text}</Text>
+                return <Text style={{width: "100px"}} ellipsis={{showTooltip: true}}>{text}</Text>
             }
         },
         {
@@ -237,6 +242,10 @@ export const HomePanel = () => {
                     data.content = ""
                 }
                 setDataSource(prevDataSource => [...prevDataSource, data])
+            } else {
+                //@ts-ignore
+                const data: columnItem = {msg: result.msg, info: []}
+                setDataSource(prevDataSource => [...prevDataSource, data])
             }
         }
         setIsQuery(false)
@@ -285,22 +294,27 @@ export const HomePanel = () => {
                 </div>
             </TabPane>
             <TabPane tab="关于" itemKey="about">
-                快速起步
+                <Text>快递查询工具 基于  <Text link underline onClick={()=>openUrl("https://www.alapi.cn")}>ALAPI</Text>  提供的接口开发而成</Text>
+                <br/>
+                <Text>获取秘钥地址：<Text link underline onClick={()=>openUrl('https://admin.alapi.cn')} >https://admin.alapi.cn</Text></Text>
             </TabPane>
         </Tabs>
         <Modal title='秘钥设置' visible={settingVisible} onCancel={() => setSettingVisible(false)} onOk={() => {
-           window && window.localStorage.setItem("tracking_token", token)
+            localStorage.setItem("tracking_token", token)
             setSettingVisible(false)
         }}>
             <Input placeholder="请输入秘钥" onChange={e => setToken(e)} value={token}/>
+            <br/>
+            <Text>获取秘钥地址：<Text link underline onClick={()=>openUrl('https://admin.alapi.cn')} >https://admin.alapi.cn</Text></Text>
         </Modal>
         <Modal title={"批量查询"} visible={batchVisible} onCancel={() => setBatchVisible(false)}
                onOk={() => handlerBatchQuery()}>
             <TextArea value={batch} onChange={e => setBatch(e)} placeholder={'请传入快递号，一行一个'}/>
         </Modal>
-        <Modal centered height={500} title={"轨迹详情"} visible={timelineVisible} onCancel={() => setTimelineVisible(false)}
+        <Modal centered height={500} title={"轨迹详情"} visible={timelineVisible}
+               onCancel={() => setTimelineVisible(false)}
                onOk={() => setTimelineVisible(false)}>
-            <Timeline style={{overflowY:'auto'}}>
+            <Timeline style={{overflowY: 'auto'}}>
                 {current?.info.map(e => (
                     <Timeline.Item key={e.time} time={e.time}>
                         {e.content}
